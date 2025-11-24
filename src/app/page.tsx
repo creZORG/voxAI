@@ -1,5 +1,5 @@
 import Features from "@/components/landing/features";
-import Footer from "@/components/landing/footer";
+import Footer from "@/components/layout/footer";
 import Hero from "@/components/landing/hero";
 import InteractiveDemo from "@/components/landing/interactive-demo";
 import Pricing from "@/components/landing/pricing";
