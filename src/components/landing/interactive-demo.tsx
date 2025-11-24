@@ -5,8 +5,6 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Mic, Bot, User, Wand2, Send, Loader2, Sparkles, AlertTriangle, ShoppingCart, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { generateAgentResponse } from '@/ai/flows/generate-agent-response';
-import { z } from 'zod';
 
 type Role = 'user' | 'agent' | 'tool' | 'system' | 'error';
 
@@ -18,41 +16,46 @@ export type Message = {
 
 type Status = 'idle' | 'processing' | 'error';
 
-const scenarios = {
-    support: {
-        title: "Angry Customer",
-        prompt: "Where is my package?! The tracking says it was delivered but it's not here! This is the second time this has happened!",
-        icon: <AlertTriangle />
-    },
-    sales: {
-        title: "Sales Inquiry",
-        prompt: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com",
-        icon: <ShoppingCart />
-    },
-    booking: {
-        title: "Book an Appointment",
-        prompt: "I need to book a follow-up call with a sales representative for next week.",
-        icon: <Calendar />
-    }
+const mockScenarios = {
+  support: {
+      title: "Angry Customer",
+      prompt: "Where is my package?! The tracking says it was delivered but it's not here! This is the second time this has happened!",
+      conversation: [
+          { role: 'user', text: "Where is my package?! The tracking says it was delivered but it's not here! This is the second time this has happened!" },
+          { role: 'agent', text: "I understand your frustration, and I'm very sorry to hear that. I see your recent order, #84321, and I'll look into this immediately. One moment." },
+          { role: 'tool', text: "Checking internal fulfillment system for order #84321..." },
+          { role: 'agent', text: "It seems there was a dispatch error at our warehouse. The package was marked 'delivered' prematurely. It's actually scheduled to go out with today's final shipment. I've flagged it as high-priority and you should receive a correct tracking link within the hour. For the trouble, I've also applied a 20% discount to your next order." },
+      ]
+  },
+  sales: {
+      title: "Sales Inquiry",
+      prompt: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com",
+      conversation: [
+          { role: 'user', text: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com" },
+          { role: 'agent', text: "Of course! We have three main tiers: Starter, Growth, and Pro. The Growth plan is our most popular. It includes 10,000 minutes and allows for dynamic sales scripts. Would you like me to send the full details to test@example.com?" },
+          { role: 'tool', text: "Calling tool: sendSubscriptionEmail with args: {\"email\":\"test@example.com\"}" },
+          { role: 'agent', text: "Great! I've just sent the brochure to your email. It includes a link to start a 10-day free trial on any plan. Is there anything else I can help with?" },
+      ]
+  },
+  booking: {
+      title: "Book an Appointment",
+      prompt: "I need to book a follow-up call with a sales representative for next week.",
+      conversation: [
+          { role: 'user', text: "I need to book a follow-up call with a sales representative for next week." },
+          { role: 'agent', text: "Certainly. I can help with that. I'm checking the calendar for our sales team's availability. One moment." },
+          { role: 'tool', text: "Checking calendar for sales team availability..." },
+          { role: 'agent', text: "It looks like next Tuesday at 10:00 AM PST is open. Does that time work for you?" },
+          { role: 'user', text: "Yes, that's perfect." },
+          { role: 'agent', text: "Excellent. I have confirmed your appointment for next Tuesday at 10:00 AM PST. You'll receive a calendar invitation shortly. Have a great day!" },
+          { role: 'tool', text: "Appointment booked successfully. Confirmation sent." },
+      ]
+  }
 }
-
-// Define the input schema for a single message
-const MessageSchema = z.object({
-  role: z.enum(['user', 'agent']),
-  text: z.string(),
-});
-
-// Define the input schema for the flow
-const AgentResponseInputSchema = z.object({
-  messages: z.array(MessageSchema),
-});
-type AgentResponseInput = z.infer<typeof AgentResponseInputSchema>;
-
 
 export default function InteractiveDemo() {
   const [status, setStatus] = useState<Status>('idle');
   const [messages, setMessages] = useState<Message[]>([
-      { role: 'system', text: "Select a scenario or type your own message to begin." }
+      { role: 'system', text: "Select a scenario to see a pre-recorded demonstration." }
   ]);
   const [input, setInput] = useState('');
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
@@ -65,107 +68,59 @@ export default function InteractiveDemo() {
     scrollToBottom();
   }, [messages]);
 
-  const handleScenarioSelect = (scenarioPrompt: string) => {
-    setMessages([{ role: 'system', text: 'Scenario selected. Click send to start.' }]);
-    setInput(scenarioPrompt);
+  const handleScenarioSelect = (scenarioKey: keyof typeof mockScenarios) => {
+    const scenario = mockScenarios[scenarioKey];
+    setInput('');
+    setMessages([{ role: 'system', text: 'Running selected scenario...' }]);
+    setStatus('processing');
+
+    let currentMessageIndex = 0;
+    const interval = setInterval(() => {
+        if (currentMessageIndex < scenario.conversation.length) {
+            setMessages(prev => [...prev.slice(0, currentMessageIndex + 1), scenario.conversation[currentMessageIndex]]);
+            currentMessageIndex++;
+        } else {
+            clearInterval(interval);
+            setStatus('idle');
+        }
+    }, 1500);
   };
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!input.trim() || status === 'processing') return;
 
-    const userMessage: Message = { role: 'user', text: input, icon: <User /> };
-    
-    // Clear the system message on first user message
-    const initialMessages = messages.length === 1 && messages[0].role === 'system' 
-        ? [] 
-        : messages;
+    // Check if input matches a scenario prompt
+    const matchingScenarioKey = Object.keys(mockScenarios).find(key => 
+      mockScenarios[key as keyof typeof mockScenarios].prompt === input.trim()
+    ) as keyof typeof mockScenarios | undefined;
 
-    const newMessages = [...initialMessages, userMessage];
-    setMessages(newMessages);
-    setInput('');
-    setStatus('processing');
-
-    try {
-      const response = await fetch('/api/agent', {
-        method: 'POST',
-        body: JSON.stringify({
-           messages: newMessages.filter(m => m.role === 'user' || m.role === 'agent').map(m => ({role: m.role, text: m.text})),
-        })
-      });
-      
-      if (!response.body) {
-        throw new Error("The response body is empty.");
-      }
-      
-      let agentMessageText = '';
-      let currentAgentMessageIndex = -1;
-
-      const reader = response.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = '';
-      
-      const processStream = async () => {
-          while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            buffer += decoder.decode(value, { stream: true });
-            const parts = buffer.split('\n\n');
-            
-            for (let i = 0; i < parts.length - 1; i++) {
-              const part = parts[i];
-              if (part.startsWith('data: ')) {
-                const jsonString = part.substring(6);
-                try {
-                  const parsedChunk = JSON.parse(jsonString);
-                  
-                  setMessages(prev => {
-                      let newMessages = [...prev];
-                      if (parsedChunk.role === 'tool') {
-                          newMessages.push({ role: 'tool', text: parsedChunk.text, icon: <Wand2 /> });
-                          agentMessageText = '';
-                          currentAgentMessageIndex = -1;
-                      } else if (parsedChunk.role === 'agent') {
-                          agentMessageText += parsedChunk.text;
-                          if (currentAgentMessageIndex !== -1 && newMessages[currentAgentMessageIndex]?.role === 'agent') {
-                              newMessages[currentAgentMessageIndex] = { ...newMessages[currentAgentMessageIndex], text: agentMessageText };
-                          } else {
-                              const newAgentMessage: Message = { role: 'agent', text: agentMessageText, icon: <Bot /> };
-                              newMessages.push(newAgentMessage);
-                              currentAgentMessageIndex = newMessages.length - 1;
-                          }
-                      } else if (parsedChunk.role === 'error') {
-                          newMessages.push({ role: 'error', text: parsedChunk.text, icon: <AlertTriangle /> });
-                      }
-                      return newMessages;
-                  });
-
-                } catch (e) {
-                   console.warn("Could not parse stream chunk part:", jsonString, e);
-                }
-              }
-            }
-            buffer = parts[parts.length -1];
-          }
-          setStatus('idle');
-      }
-      
-      processStream();
-
-    } catch (err) {
-      console.error(err);
-      const errorMessage = err instanceof Error ? err.message : "An unexpected error occurred.";
-      setMessages(prev => [...prev, { role: 'error', text: `Error: ${errorMessage}`, icon: <AlertTriangle/> }]);
-      setStatus('error');
+    if (matchingScenarioKey) {
+        handleScenarioSelect(matchingScenarioKey);
+        return;
     }
+    
+    // If not a scenario, show error
+    const userMessage: Message = { role: 'user', text: input, icon: <User /> };
+    const initialMessages = messages.length === 1 && messages[0].role === 'system' ? [] : messages;
+    
+    setMessages([
+        ...initialMessages, 
+        userMessage,
+        { 
+            role: 'error', 
+            text: "The live demo is temporarily disabled. Please select one of the pre-defined scenarios to see how the agent works.", 
+            icon: <AlertTriangle/> 
+        }
+    ]);
+    setInput('');
+    setStatus('error');
+    setTimeout(() => setStatus('idle'), 3000);
   };
-
 
   const statusMap = {
     idle: { text: "AI Agent Ready", icon: <Sparkles className="w-12 h-12 text-slate-400" />, bgColor: 'bg-slate-800' },
-    processing: { text: "Agent is thinking...", icon: <Loader2 className="w-12 h-12 text-white animate-spin" />, bgColor: 'bg-indigo-500/20' },
-    error: { text: "An Error Occurred", icon: <AlertTriangle className="w-12 h-12 text-rose-400" />, bgColor: 'bg-rose-500/20' },
+    processing: { text: "Demonstration in progress...", icon: <Loader2 className="w-12 h-12 text-white animate-spin" />, bgColor: 'bg-indigo-500/20' },
+    error: { text: "Live Demo Disabled", icon: <AlertTriangle className="w-12 h-12 text-rose-400" />, bgColor: 'bg-rose-500/20' },
   };
 
   return (
@@ -174,7 +129,7 @@ export default function InteractiveDemo() {
         <div>
           <div className="text-center mb-8">
               <h2 className="text-3xl font-bold text-white mb-2">Live Demo</h2>
-              <p className="text-slate-400">Interact with a real VOXA agent.</p>
+              <p className="text-slate-400">Interact with a VOXA agent.</p>
           </div>
           <div className={cn(
             `w-40 h-40 rounded-full flex items-center justify-center transition-all duration-500 mx-auto`,
@@ -190,15 +145,15 @@ export default function InteractiveDemo() {
         </div>
 
         <div className="w-full max-w-sm">
-            <p className="text-xs text-center font-semibold text-slate-400 uppercase tracking-wider mb-3">Or Start With A Scenario</p>
+            <p className="text-xs text-center font-semibold text-slate-400 uppercase tracking-wider mb-3">Start With A Scenario</p>
             <div className="grid grid-cols-3 gap-2">
-                {Object.values(scenarios).map((s) => (
+                {Object.entries(mockScenarios).map(([key, s]) => (
                      <button 
                         key={s.title}
-                        onClick={() => handleScenarioSelect(s.prompt)}
+                        onClick={() => handleScenarioSelect(key as keyof typeof mockScenarios)}
                         className="text-xs text-center p-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition-colors flex flex-col items-center gap-2 border border-transparent focus:border-violet-500 focus:bg-violet-500/10 focus:text-violet-300 outline-none"
                      >
-                        {s.icon}
+                        {s.conversation[0].role === 'user' ? <ShoppingCart /> : s.conversation[0].role === 'agent' ? <AlertTriangle /> : <Calendar />}
                         {s.title}
                     </button>
                 ))}
@@ -232,15 +187,15 @@ export default function InteractiveDemo() {
                   msg.role === 'user' && "text-indigo-400",
                   msg.role === 'tool' && "text-emerald-400 justify-center",
                   msg.role === 'system' && "text-slate-500 justify-center",
-                  msg.role === 'error' && "text-rose-400 justify-center",
+                  msg.role === 'error' && "text-rose-400",
                )}>
-                {msg.icon}
+                {msg.icon ? msg.icon : msg.role === 'tool' ? <Wand2 size={12}/> : msg.role === 'agent' ? <Bot size={12}/> : <User size={12} />}
                 {msg.role}
               </div>
               <p className="font-sans text-white/90 text-sm leading-relaxed whitespace-pre-wrap">{msg.text}</p>
             </div>
           ))}
-           {status === 'processing' && messages[messages.length - 1]?.role !== 'agent' && (
+           {status === 'processing' && (
              <div className="ml-8 relative">
                 <div className="absolute -top-3 -left-3 w-7 h-7 rounded-full flex items-center justify-center text-white bg-violet-600">
                     <Bot size={16}/>
@@ -261,7 +216,7 @@ export default function InteractiveDemo() {
                 type="text"
                 value={input}
                 onChange={(e) => setInput(e.target.value)}
-                placeholder="Type your message..."
+                placeholder="Type a scenario prompt or your own message..."
                 className="flex-1 bg-slate-800/50 rounded-lg px-4 py-2 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
                 disabled={status === 'processing'}
             />
