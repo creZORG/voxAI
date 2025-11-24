@@ -2,7 +2,7 @@
 "use client";
 
 import React, { useState, useRef, useEffect } from 'react';
-import { Mic, Cpu, Bot, User, Wand2, Send, Loader2, Sparkles, AlertTriangle, ShoppingCart, Calendar } from 'lucide-react';
+import { Mic, Bot, User, Wand2, Send, Loader2, Sparkles, AlertTriangle, ShoppingCart, Calendar } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { generateAgentResponse } from '@/ai/flows/generate-agent-response';
@@ -74,34 +74,45 @@ export default function InteractiveDemo() {
 
     try {
       const stream = await generateAgentResponse({
-        messages: newMessages.filter(m => m.role !== 'system' && m.role !== 'error'),
+        messages: newMessages.filter(m => m.role !== 'system' && m.role !== 'error' && m.role !== 'tool').map(m => ({role: m.role, text: m.text})),
       });
       
       let agentMessageText = '';
-      let toolMessageText = '';
 
-      for await (const chunk of stream) {
-        if (chunk.role === 'tool') {
-            // If there's an in-progress agent message, finalize it.
-            if(agentMessageText) {
-                setMessages(prev => [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }]);
-                agentMessageText = '';
-            }
-            // Add the tool message
-            setMessages(prev => [...prev, { role: 'tool', text: chunk.text, icon: <Wand2 /> }]);
+      const reader = stream.getReader();
+      const decoder = new TextDecoder();
+      
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
 
-        } else if (chunk.role === 'agent') {
-            agentMessageText += chunk.text;
-            setMessages(prev => {
-                const lastMessage = prev[prev.length - 1];
-                if (lastMessage.role === 'agent') {
-                    // Update streaming agent message
-                    return [...prev.slice(0, -1), { role: 'agent', text: agentMessageText, icon: <Bot /> }];
-                } else {
-                    // Add new agent message
-                    return [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }];
+        const chunk = decoder.decode(value);
+        try {
+            const parsedChunk = JSON.parse(chunk);
+            if (parsedChunk.role === 'tool') {
+                // If there's an in-progress agent message, finalize it.
+                if(agentMessageText) {
+                    setMessages(prev => [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }]);
+                    agentMessageText = '';
                 }
-            });
+                // Add the tool message
+                setMessages(prev => [...prev, { role: 'tool', text: parsedChunk.text, icon: <Wand2 /> }]);
+
+            } else if (parsedChunk.role === 'agent') {
+                agentMessageText += parsedChunk.text;
+                setMessages(prev => {
+                    const lastMessage = prev[prev.length - 1];
+                    // this logic handles streaming delta updates to the last message
+                    if (lastMessage.role === 'agent') {
+                        return [...prev.slice(0, -1), { role: 'agent', text: agentMessageText, icon: <Bot /> }];
+                    } else {
+                        return [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }];
+                    }
+                });
+            }
+        } catch(e) {
+            // Handle cases where the chunk is not a complete JSON object
+            console.warn("Could not parse stream chunk:", chunk);
         }
       }
 
@@ -232,5 +243,3 @@ export default function InteractiveDemo() {
     </div>
   );
 }
-
-    

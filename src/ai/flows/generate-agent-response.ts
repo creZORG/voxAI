@@ -196,5 +196,3 @@ export async function generateAgentResponse(input: AgentResponseInput) {
 
     return stream;
 }
-
-    
