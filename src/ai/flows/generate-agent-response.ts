@@ -129,13 +129,10 @@ export async function generateAgentResponse(input: AgentResponseInput) {
 
   // Initial call to LLM
   const llmResponse = await ai.generate({
-    prompt: {
-      history: input.messages.map(m => ({
-        role: m.role === 'agent' ? 'model' : m.role,
-        content: [{ text: m.text }],
-      })),
-      messages: []
-    },
+    prompt: input.messages.map(m => ({
+      role: m.role === 'agent' ? 'model' : m.role,
+      content: [{ text: m.text }],
+    })),
     model: 'googleai/gemini-2.5-flash',
     config: { temperature: 0.3 },
     tools: [getOrderStatus, applyDiscount, sendSubscriptionEmail, bookAppointment],
@@ -163,8 +160,7 @@ export async function generateAgentResponse(input: AgentResponseInput) {
 
             // Follow-up call
             const finalResponse = await ai.generate({
-              prompt: {
-                history: [
+              prompt: [
                   ...input.messages.map(m => ({
                     role: m.role === 'agent' ? 'model' : m.role,
                     content: [{ text: m.text }]
@@ -174,9 +170,7 @@ export async function generateAgentResponse(input: AgentResponseInput) {
                     role: 'tool',
                     content: [{ text: JSON.stringify(toolResult) }]
                   },
-                ],
-                messages: []
-              },
+              ],
               model: 'googleai/gemini-2.5-flash',
               config: { temperature: 0.5 }
             });
