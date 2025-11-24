@@ -20,6 +20,7 @@ const mockScenarios = {
   support: {
       title: "Angry Customer",
       prompt: "Where is my package?! The tracking says it was delivered but it's not here! This is the second time this has happened!",
+      icon: <ShoppingCart />,
       conversation: [
           { role: 'user', text: "Where is my package?! The tracking says it was delivered but it's not here! This is the second time this has happened!" },
           { role: 'agent', text: "I understand your frustration, and I'm very sorry to hear that. I see your recent order, #84321, and I'll look into this immediately. One moment." },
@@ -30,6 +31,7 @@ const mockScenarios = {
   sales: {
       title: "Sales Inquiry",
       prompt: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com",
+      icon: <Calendar />,
       conversation: [
           { role: 'user', text: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com" },
           { role: 'agent', text: "Of course! We have three main tiers: Starter, Growth, and Pro. The Growth plan is our most popular. It includes 10,000 minutes and allows for dynamic sales scripts. Would you like me to send the full details to test@example.com?" },
@@ -40,6 +42,7 @@ const mockScenarios = {
   booking: {
       title: "Book an Appointment",
       prompt: "I need to book a follow-up call with a sales representative for next week.",
+      icon: <AlertTriangle />,
       conversation: [
           { role: 'user', text: "I need to book a follow-up call with a sales representative for next week." },
           { role: 'agent', text: "Certainly. I can help with that. I'm checking the calendar for our sales team's availability. One moment." },
@@ -153,7 +156,7 @@ export default function InteractiveDemo() {
                         onClick={() => handleScenarioSelect(key as keyof typeof mockScenarios)}
                         className="text-xs text-center p-2 rounded-lg bg-slate-700/50 text-slate-300 hover:bg-slate-700 transition-colors flex flex-col items-center gap-2 border border-transparent focus:border-violet-500 focus:bg-violet-500/10 focus:text-violet-300 outline-none"
                      >
-                        {s.conversation[0].role === 'user' ? <ShoppingCart /> : s.conversation[0].role === 'agent' ? <AlertTriangle /> : <Calendar />}
+                        {s.icon}
                         {s.title}
                     </button>
                 ))}

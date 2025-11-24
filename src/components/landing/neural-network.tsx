@@ -22,7 +22,6 @@ const NeuralNetwork: React.FC = () => {
     let particles: Particle[] = [];
     const particleCount = width < 768 ? 80 : 150;
     const fov = width * 0.5;
-    let mouse = { x: width / 2, y: height / 2 };
 
     class Particle {
       x: number;
@@ -53,7 +52,7 @@ const NeuralNetwork: React.FC = () => {
         this.projectedY = this.y * this.projectedScale + height / 2;
       }
 
-      update(rotationX: number, rotationY: number) {
+      update(rotationY: number) {
         // Rotate around Y axis (horizontal rotation)
         const cosY = Math.cos(rotationY);
         const sinY = Math.sin(rotationY);
@@ -80,7 +79,6 @@ const NeuralNetwork: React.FC = () => {
 
     let animationFrameId: number;
     let rotationY = 0;
-    let rotationX = 0;
 
     function animate() {
       ctx!.clearRect(0, 0, width, height);
@@ -90,10 +88,9 @@ const NeuralNetwork: React.FC = () => {
       const lineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
       rotationY += 0.0005;
-      rotationX = (mouse.y / height - 0.5) * 0.001;
 
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update(rotationX, rotationY);
+        particles[i].update(rotationY);
         if (particles[i].projectedScale > 0) { // Check if particle is visible
           ctx!.beginPath();
           ctx!.arc(particles[i].projectedX, particles[i].projectedY, particles[i].projectedScale * 2, 0, Math.PI * 2);
@@ -134,24 +131,14 @@ const NeuralNetwork: React.FC = () => {
       createParticles();
     };
 
-    const handleMouseMove = (e: MouseEvent) => {
-        const rect = canvas.getBoundingClientRect();
-        mouse.x = e.clientX - rect.left;
-        mouse.y = e.clientY - rect.top;
-    }
-
     createParticles();
     animate();
 
     window.addEventListener('resize', handleResize);
-    canvas.addEventListener('mousemove', handleMouseMove);
 
     return () => {
       cancelAnimationFrame(animationFrameId);
       window.removeEventListener('resize', handleResize);
-      if (canvas) {
-        canvas.removeEventListener('mousemove', handleMouseMove);
-      }
     };
   }, [theme]); // Rerun effect if theme changes
 
