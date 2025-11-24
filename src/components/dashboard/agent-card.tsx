@@ -12,7 +12,7 @@ interface AgentCardProps {
 export default function AgentCard({ name, status, calls, sentiment, desc }: AgentCardProps) {
   const isActive = status === 'active';
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-6 hover:border-violet-500/50 transition-all h-64 flex flex-col justify-between group">
+    <div className="bg-card border rounded-xl p-6 hover:border-violet-500/50 transition-all h-64 flex flex-col justify-between group">
       <div>
         <div className="flex justify-between items-start mb-4">
           <div className={cn(
@@ -28,18 +28,18 @@ export default function AgentCard({ name, status, calls, sentiment, desc }: Agen
             {status}
           </div>
         </div>
-        <h3 className="font-bold text-white mb-1 group-hover:text-violet-400 transition-colors">{name}</h3>
-        <p className="text-xs text-slate-500 line-clamp-2">{desc}</p>
+        <h3 className="font-bold text-card-foreground mb-1 group-hover:text-violet-500 dark:group-hover:text-violet-400 transition-colors">{name}</h3>
+        <p className="text-xs text-muted-foreground line-clamp-2">{desc}</p>
       </div>
       
-      <div className="border-t border-slate-800 pt-4 flex justify-between text-xs">
+      <div className="border-t border-border pt-4 flex justify-between text-xs">
         <div>
-          <div className="text-slate-500 mb-1">Total Calls</div>
-          <div className="text-white font-mono">{calls}</div>
+          <div className="text-muted-foreground mb-1">Total Calls</div>
+          <div className="text-card-foreground font-mono">{calls}</div>
         </div>
         <div className="text-right">
-          <div className="text-slate-500 mb-1">Sentiment</div>
-          <div className="text-emerald-400 font-mono font-bold">{sentiment}</div>
+          <div className="text-muted-foreground mb-1">Sentiment</div>
+          <div className="text-emerald-500 dark:text-emerald-400 font-mono font-bold">{sentiment}</div>
         </div>
       </div>
     </div>
