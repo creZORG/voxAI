@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Mic, Menu, X, Sun, Moon } from 'lucide-react';
+import { Mic, Menu, X, Sun, Moon, LogOut } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { useCurrency } from '@/contexts/currency-context';
@@ -12,11 +12,37 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useUser } from '@/firebase/auth/use-user';
+import { getAuth, signOut } from 'firebase/auth';
+import { useToast } from '@/hooks/use-toast';
+import { useRouter } from 'next/navigation';
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { currency, toggleCurrency } = useCurrency();
   const { setTheme } = useTheme();
+  const { user } = useUser();
+  const { toast } = useToast();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    const auth = getAuth();
+    try {
+      await signOut(auth);
+      toast({
+        title: "Logged Out",
+        description: "You have been successfully logged out.",
+      });
+      router.push('/login');
+    } catch (error) {
+      toast({
+        variant: "destructive",
+        title: "Logout Failed",
+        description: "Could not log you out. Please try again.",
+      });
+    }
+  };
+
 
   return (
     <header className="fixed w-full z-50 border-b border-slate-200/50 dark:border-white/5 bg-white/80 dark:bg-slate-950/80 backdrop-blur-md">
@@ -62,12 +88,27 @@ export default function Header() {
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
-            <Button variant="ghost" className="!px-4 !py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" asChild>
-              <Link href="/login">Log In</Link>
-            </Button>
-            <Button className="!px-4 !py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50" asChild>
-              <Link href="/signup">Sign Up</Link>
-            </Button>
+
+            {user ? (
+              <>
+                <Button variant="ghost" className="!px-4 !py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" asChild>
+                  <Link href="/dashboard">Dashboard</Link>
+                </Button>
+                <Button onClick={handleLogout} variant="outline" className="!px-4 !py-2 text-sm">
+                  <LogOut className="mr-2 h-4 w-4" />
+                  Log Out
+                </Button>
+              </>
+            ) : (
+               <>
+                <Button variant="ghost" className="!px-4 !py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-white/5" asChild>
+                  <Link href="/login">Log In</Link>
+                </Button>
+                <Button className="!px-4 !py-2 text-sm bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50" asChild>
+                  <Link href="/signup">Sign Up</Link>
+                </Button>
+              </>
+            )}
           </nav>
 
           {/* Mobile Menu Button */}
@@ -84,34 +125,41 @@ export default function Header() {
         <nav className="md:hidden bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-white/10 p-4 space-y-4">
           <Link href="/#product" onClick={() => setIsMenuOpen(false)} className="block w-full text-left text-slate-600 dark:text-slate-300 py-2">Product</Link>
           <Link href="/#pricing" onClick={() => setIsMenuOpen(false)} className="block w-full text-left text-slate-600 dark:text-slate-300 py-2">Pricing</Link>
-          <div className="flex justify-between items-center">
-             <Button variant="ghost" className="w-full justify-start" asChild>
-                <Link href="/login" onClick={() => setIsMenuOpen(false)}>Log In</Link>
+          
+           {user ? (
+            <>
+              <Link href="/dashboard" onClick={() => setIsMenuOpen(false)} className="block w-full text-left text-slate-600 dark:text-slate-300 py-2">Dashboard</Link>
+              <Button onClick={() => { handleLogout(); setIsMenuOpen(false); }} variant="outline" className="w-full justify-start">
+                Log Out
               </Button>
+            </>
+          ) : (
+            <>
+              <Link href="/login" onClick={() => setIsMenuOpen(false)} className="block w-full text-left text-slate-600 dark:text-slate-300 py-2">Log In</Link>
+              <Button className="w-full bg-gradient-to-r from-violet-600 to-indigo-600" asChild>
+                <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
+              </Button>
+            </>
+          )}
+
+          <div className="border-t border-slate-200 dark:border-white/10 pt-4">
               <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon" className='h-8 w-8'>
-                  <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-                  <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-                  <span className="sr-only">Toggle theme</span>
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={() => setTheme("light")}>
-                  Light
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme("dark")}>
-                  Dark
-                </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => setTheme("system")}>
-                  System
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="w-full justify-between">
+                    Theme
+                    <span>
+                      <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+                      <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+                    </span>
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-[calc(100vw-2rem)]">
+                  <DropdownMenuItem onClick={() => setTheme("light")}>Light</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("dark")}>Dark</DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setTheme("system")}>System</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
           </div>
-          <Button className="w-full bg-gradient-to-r from-violet-600 to-indigo-600" asChild>
-            <Link href="/signup" onClick={() => setIsMenuOpen(false)}>Sign Up</Link>
-          </Button>
         </nav>
       )}
     </header>
