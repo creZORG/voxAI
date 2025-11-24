@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Link from "next/link";
-import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
+import { getAuth, createUserWithEmailAndPassword, FirebaseError } from "firebase/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Mic, ArrowRight } from "lucide-react";
@@ -18,6 +18,20 @@ const formSchema = z.object({
   email: z.string().email({ message: "Invalid email address." }),
   password: z.string().min(6, { message: "Password must be at least 6 characters." }),
 });
+
+const getFirebaseAuthErrorMessage = (error: FirebaseError): string => {
+  switch (error.code) {
+    case 'auth/email-already-in-use':
+      return "An account with this email address already exists. Please log in.";
+    case 'auth/invalid-email':
+      return "Please enter a valid email address.";
+    case 'auth/weak-password':
+      return "Your password must be at least 6 characters long.";
+    default:
+      return "An unexpected error occurred. Please try again later.";
+  }
+};
+
 
 export default function SignupPage() {
   const { toast } = useToast();
@@ -42,11 +56,15 @@ export default function SignupPage() {
         description: "Welcome! We're setting up your dashboard.",
       });
       router.push("/dashboard");
-    } catch (error: any) {
+    } catch (error) {
+       const description = error instanceof FirebaseError 
+        ? getFirebaseAuthErrorMessage(error)
+        : "An unknown error occurred.";
+
       toast({
         variant: "destructive",
         title: "Signup Failed",
-        description: error.message,
+        description,
       });
     }
   };
