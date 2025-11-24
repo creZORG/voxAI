@@ -38,7 +38,7 @@ export async function generateAgentResponse(
       const encoder = new TextEncoder();
 
       const send = (data: object) => {
-        controller.enqueue(encoder.encode(JSON.stringify(data)));
+        controller.enqueue(encoder.encode('data: ' + JSON.stringify(data) + '\n\n'));
       };
 
       try {

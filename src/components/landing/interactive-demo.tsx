@@ -87,55 +87,66 @@ export default function InteractiveDemo() {
     setStatus('processing');
 
     try {
-      const stream = await generateAgentResponse({
-        messages: newMessages.filter(m => m.role === 'user' || m.role === 'agent').map(m => ({role: m.role, text: m.text})),
+      const response = await fetch('/api/agent', {
+        method: 'POST',
+        body: JSON.stringify({
+           messages: newMessages.filter(m => m.role === 'user' || m.role === 'agent').map(m => ({role: m.role, text: m.text})),
+        })
       });
+      
+      if (!response.body) {
+        throw new Error("The response body is empty.");
+      }
       
       let agentMessageText = '';
       let currentAgentMessageIndex = -1;
 
-      const reader = stream.getReader();
-      const decoder = new TextDecoder("utf-8");
+      const reader = response.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = '';
       
       const processStream = async () => {
           while (true) {
             const { value, done } = await reader.read();
             if (done) break;
 
-            const chunk = decoder.decode(value, { stream: true });
+            buffer += decoder.decode(value, { stream: true });
+            const parts = buffer.split('\n\n');
             
-            // It's possible for a chunk to have multiple JSON objects
-            const parts = chunk.split('}').filter(s => s.trim());
-            for (const part of parts) {
+            for (let i = 0; i < parts.length - 1; i++) {
+              const part = parts[i];
+              if (part.startsWith('data: ')) {
+                const jsonString = part.substring(6);
                 try {
-                    const parsedChunk = JSON.parse(part + '}');
-                    
-                    setMessages(prev => {
-                        let newMessages = [...prev];
-                        if (parsedChunk.role === 'tool') {
-                            newMessages.push({ role: 'tool', text: parsedChunk.text, icon: <Wand2 /> });
-                            agentMessageText = '';
-                            currentAgentMessageIndex = -1;
-                        } else if (parsedChunk.role === 'agent') {
-                            agentMessageText += parsedChunk.text;
-                            if (currentAgentMessageIndex !== -1 && newMessages[currentAgentMessageIndex]?.role === 'agent') {
-                                newMessages[currentAgentMessageIndex] = { ...newMessages[currentAgentMessageIndex], text: agentMessageText };
-                            } else {
-                                const newAgentMessage: Message = { role: 'agent', text: agentMessageText, icon: <Bot /> };
-                                newMessages.push(newAgentMessage);
-                                currentAgentMessageIndex = newMessages.length - 1;
-                            }
-                        } else if (parsedChunk.role === 'error') {
-                            newMessages.push({ role: 'error', text: parsedChunk.text, icon: <AlertTriangle /> });
-                        }
-                        return newMessages;
-                    });
-                } catch(e) {
-                    // This can happen if a chunk doesn't form a complete JSON object yet.
-                    // The streaming nature of the decoder should handle this in the next chunk.
-                    // console.warn("Could not parse stream chunk part:", part, e);
+                  const parsedChunk = JSON.parse(jsonString);
+                  
+                  setMessages(prev => {
+                      let newMessages = [...prev];
+                      if (parsedChunk.role === 'tool') {
+                          newMessages.push({ role: 'tool', text: parsedChunk.text, icon: <Wand2 /> });
+                          agentMessageText = '';
+                          currentAgentMessageIndex = -1;
+                      } else if (parsedChunk.role === 'agent') {
+                          agentMessageText += parsedChunk.text;
+                          if (currentAgentMessageIndex !== -1 && newMessages[currentAgentMessageIndex]?.role === 'agent') {
+                              newMessages[currentAgentMessageIndex] = { ...newMessages[currentAgentMessageIndex], text: agentMessageText };
+                          } else {
+                              const newAgentMessage: Message = { role: 'agent', text: agentMessageText, icon: <Bot /> };
+                              newMessages.push(newAgentMessage);
+                              currentAgentMessageIndex = newMessages.length - 1;
+                          }
+                      } else if (parsedChunk.role === 'error') {
+                          newMessages.push({ role: 'error', text: parsedChunk.text, icon: <AlertTriangle /> });
+                      }
+                      return newMessages;
+                  });
+
+                } catch (e) {
+                   console.warn("Could not parse stream chunk part:", jsonString, e);
                 }
+              }
             }
+            buffer = parts[parts.length -1];
           }
           setStatus('idle');
       }
