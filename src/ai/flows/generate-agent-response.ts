@@ -6,6 +6,7 @@
 
 import { ai } from '@/ai/genkit';
 import { z } from 'genkit';
+import { Readable } from 'stream';
 
 // Define schemas for tools
 const GetOrderStatusInputSchema = z.object({
@@ -103,7 +104,7 @@ const bookAppointment = ai.defineTool(
 
 // Define the main flow input/output
 const MessageSchema = z.object({
-  role: z.enum(['user', 'agent', 'tool']),
+  role: z.enum(['user', 'agent']),
   text: z.string(),
 });
 
@@ -141,10 +142,13 @@ const agentPrompt = ai.definePrompt({
 
 export async function generateAgentResponse(input: AgentResponseInput) {
     const llmResponse = await ai.generate({
-        prompt: input.messages.map(m => ({
-            role: m.role,
-            content: [{ text: m.text }],
-        })),
+        prompt: {
+            history: input.messages.map(m => ({
+                role: m.role === 'agent' ? 'model' : m.role,
+                content: [{ text: m.text }],
+            })),
+            messages: [], // We are sending the last message as part of history
+        },
         model: 'googleai/gemini-2.5-flash',
         config: {
             temperature: 0.3,
@@ -160,18 +164,26 @@ export async function generateAgentResponse(input: AgentResponseInput) {
             for (const choice of choices) {
                 if (choice.finishReason === 'toolCode') {
                     for(const toolRequest of choice.message.toolRequests) {
-                        controller.enqueue({ role: 'tool', text: `ACTION: ${toolRequest.name}(${JSON.stringify(toolRequest.input)})` });
+                        try {
+                            const chunk = JSON.stringify({ role: 'tool', text: `ACTION: ${toolRequest.name}(${JSON.stringify(toolRequest.input)})`});
+                            controller.enqueue(chunk);
+                        } catch (e) {
+                             console.warn("Could not stringify tool request chunk:", e);
+                        }
                         
                         // Execute the tool and send the result back to the model
                         const toolResponse = await ai.runTool(toolRequest);
 
                         // Feed the tool response back into the model to get a natural language response
                          const finalResponse = await ai.generate({
-                            prompt: [
-                                ...input.messages.map(m => ({ role: m.role, content: [{ text: m.text }] })),
-                                choice.message,
-                                { role: 'tool', content: [{ toolResponse }] }
-                            ],
+                            prompt: {
+                                history: [
+                                    ...input.messages.map(m => ({ role: m.role === 'agent' ? 'model' : m.role, content: [{ text: m.text }] })),
+                                    choice.message,
+                                    { role: 'tool', content: [{ toolResponse }] }
+                                ],
+                                messages: []
+                            },
                              model: 'googleai/gemini-2.5-flash',
                              config: {
                                 temperature: 0.5,
@@ -180,13 +192,23 @@ export async function generateAgentResponse(input: AgentResponseInput) {
 
                         const text = finalResponse.text;
                         if(text) {
-                            controller.enqueue({ role: 'agent', text });
+                            try {
+                                const chunk = JSON.stringify({ role: 'agent', text });
+                                controller.enqueue(chunk);
+                            } catch (e) {
+                                console.warn("Could not stringify agent response chunk:", e);
+                            }
                         }
                     }
                 } else {
                     const text = choice.text;
                     if(text) {
-                        controller.enqueue({ role: 'agent', text });
+                        try {
+                           const chunk = JSON.stringify({ role: 'agent', text });
+                           controller.enqueue(chunk);
+                        } catch (e) {
+                            console.warn("Could not stringify agent response chunk:", e);
+                        }
                     }
                 }
             }

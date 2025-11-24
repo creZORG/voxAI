@@ -74,49 +74,56 @@ export default function InteractiveDemo() {
 
     try {
       const stream = await generateAgentResponse({
-        messages: newMessages.filter(m => m.role !== 'system' && m.role !== 'error' && m.role !== 'tool').map(m => ({role: m.role, text: m.text})),
+        messages: newMessages.filter(m => m.role === 'user' || m.role === 'agent').map(m => ({role: m.role, text: m.text})),
       });
       
       let agentMessageText = '';
+      let currentAgentMessageIndex = -1;
 
       const reader = stream.getReader();
-      const decoder = new TextDecoder();
+      const decoder = new TextDecoder("utf-8");
       
-      while (true) {
-        const { value, done } = await reader.read();
-        if (done) break;
+      const processStream = async () => {
+          while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
 
-        const chunk = decoder.decode(value);
-        try {
-            const parsedChunk = JSON.parse(chunk);
-            if (parsedChunk.role === 'tool') {
-                // If there's an in-progress agent message, finalize it.
-                if(agentMessageText) {
-                    setMessages(prev => [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }]);
-                    agentMessageText = '';
+            const chunk = decoder.decode(value, { stream: true });
+            
+            // It's possible for a chunk to have multiple JSON objects
+            chunk.split('}').filter(s => s.trim()).forEach(part => {
+                try {
+                    const parsedChunk = JSON.parse(part + '}');
+                    
+                    setMessages(prev => {
+                        let newMessages = [...prev];
+                        if (parsedChunk.role === 'tool') {
+                            newMessages.push({ role: 'tool', text: parsedChunk.text, icon: <Wand2 /> });
+                            agentMessageText = '';
+                            currentAgentMessageIndex = -1;
+                        } else if (parsedChunk.role === 'agent') {
+                            agentMessageText += parsedChunk.text;
+                            if (currentAgentMessageIndex !== -1 && newMessages[currentAgentMessageIndex]?.role === 'agent') {
+                                newMessages[currentAgentMessageIndex] = { ...newMessages[currentAgentMessageIndex], text: agentMessageText };
+                            } else {
+                                const newAgentMessage: Message = { role: 'agent', text: agentMessageText, icon: <Bot /> };
+                                newMessages.push(newAgentMessage);
+                                currentAgentMessageIndex = newMessages.length - 1;
+                            }
+                        }
+                        return newMessages;
+                    });
+                } catch(e) {
+                    // This can happen if a chunk doesn't form a complete JSON object yet.
+                    // The streaming nature of the decoder should handle this in the next chunk.
+                    // console.warn("Could not parse stream chunk part:", part, e);
                 }
-                // Add the tool message
-                setMessages(prev => [...prev, { role: 'tool', text: parsedChunk.text, icon: <Wand2 /> }]);
-
-            } else if (parsedChunk.role === 'agent') {
-                agentMessageText += parsedChunk.text;
-                setMessages(prev => {
-                    const lastMessage = prev[prev.length - 1];
-                    // this logic handles streaming delta updates to the last message
-                    if (lastMessage.role === 'agent') {
-                        return [...prev.slice(0, -1), { role: 'agent', text: agentMessageText, icon: <Bot /> }];
-                    } else {
-                        return [...prev, { role: 'agent', text: agentMessageText, icon: <Bot /> }];
-                    }
-                });
-            }
-        } catch(e) {
-            // Handle cases where the chunk is not a complete JSON object
-            console.warn("Could not parse stream chunk:", chunk);
-        }
+            });
+          }
+          setStatus('idle');
       }
-
-      setStatus('idle');
+      
+      processStream();
 
     } catch (err) {
       console.error(err);
