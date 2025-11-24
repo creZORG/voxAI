@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import Link from "next/link";
-import { getAuth, signInWithEmailAndPassword, FirebaseError } from "firebase/auth";
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
+import type { FirebaseError } from 'firebase/app';
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { Mic, ArrowRight } from "lucide-react";
@@ -54,8 +55,8 @@ export default function LoginPage() {
       });
       router.push("/dashboard");
     } catch (error) {
-      const description = error instanceof FirebaseError 
-        ? getFirebaseAuthErrorMessage(error)
+      const description = (error as FirebaseError).code
+        ? getFirebaseAuthErrorMessage(error as FirebaseError)
         : "An unknown error occurred.";
       
       toast({
