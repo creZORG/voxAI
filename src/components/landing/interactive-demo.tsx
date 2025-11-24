@@ -6,6 +6,7 @@ import { Mic, Bot, User, Wand2, Send, Loader2, Sparkles, AlertTriangle, Shopping
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { generateAgentResponse } from '@/ai/flows/generate-agent-response';
+import { z } from 'zod';
 
 type Role = 'user' | 'agent' | 'tool' | 'system' | 'error';
 
@@ -25,7 +26,7 @@ const scenarios = {
     },
     sales: {
         title: "Sales Inquiry",
-        prompt: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing?",
+        prompt: "Hi, I'm interested in your coffee subscription. Can you tell me more about the options and pricing? My email is test@example.com",
         icon: <ShoppingCart />
     },
     booking: {
@@ -34,6 +35,19 @@ const scenarios = {
         icon: <Calendar />
     }
 }
+
+// Define the input schema for a single message
+const MessageSchema = z.object({
+  role: z.enum(['user', 'agent']),
+  text: z.string(),
+});
+
+// Define the input schema for the flow
+const AgentResponseInputSchema = z.object({
+  messages: z.array(MessageSchema),
+});
+type AgentResponseInput = z.infer<typeof AgentResponseInputSchema>;
+
 
 export default function InteractiveDemo() {
   const [status, setStatus] = useState<Status>('idle');
@@ -91,7 +105,8 @@ export default function InteractiveDemo() {
             const chunk = decoder.decode(value, { stream: true });
             
             // It's possible for a chunk to have multiple JSON objects
-            chunk.split('}').filter(s => s.trim()).forEach(part => {
+            const parts = chunk.split('}').filter(s => s.trim());
+            for (const part of parts) {
                 try {
                     const parsedChunk = JSON.parse(part + '}');
                     
@@ -110,6 +125,8 @@ export default function InteractiveDemo() {
                                 newMessages.push(newAgentMessage);
                                 currentAgentMessageIndex = newMessages.length - 1;
                             }
+                        } else if (parsedChunk.role === 'error') {
+                            newMessages.push({ role: 'error', text: parsedChunk.text, icon: <AlertTriangle /> });
                         }
                         return newMessages;
                     });
@@ -118,7 +135,7 @@ export default function InteractiveDemo() {
                     // The streaming nature of the decoder should handle this in the next chunk.
                     // console.warn("Could not parse stream chunk part:", part, e);
                 }
-            });
+            }
           }
           setStatus('idle');
       }
