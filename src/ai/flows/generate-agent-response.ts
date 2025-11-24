@@ -142,13 +142,10 @@ const agentPrompt = ai.definePrompt({
 
 export async function generateAgentResponse(input: AgentResponseInput) {
     const llmResponse = await ai.generate({
-        prompt: {
-            history: input.messages.map(m => ({
-                role: m.role === 'agent' ? 'model' : m.role,
-                content: [{ text: m.text }],
-            })),
-            messages: [], // We are sending the last message as part of history
-        },
+        prompt: input.messages.map(m => ({
+            role: m.role === 'agent' ? 'model' : m.role,
+            content: [{ text: m.text }],
+        })),
         model: 'googleai/gemini-2.5-flash',
         config: {
             temperature: 0.3,
@@ -176,14 +173,11 @@ export async function generateAgentResponse(input: AgentResponseInput) {
 
                         // Feed the tool response back into the model to get a natural language response
                          const finalResponse = await ai.generate({
-                            prompt: {
-                                history: [
-                                    ...input.messages.map(m => ({ role: m.role === 'agent' ? 'model' : m.role, content: [{ text: m.text }] })),
-                                    choice.message,
-                                    { role: 'tool', content: [{ toolResponse }] }
-                                ],
-                                messages: []
-                            },
+                            prompt: [
+                                ...input.messages.map(m => ({ role: m.role === 'agent' ? 'model' : m.role, content: [{ text: m.text }] })),
+                                choice.message,
+                                { role: 'tool', content: [{ data: toolResponse }] }
+                            ],
                              model: 'googleai/gemini-2.5-flash',
                              config: {
                                 temperature: 0.5,
