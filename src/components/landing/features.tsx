@@ -1,8 +1,11 @@
 import { Zap, Globe, ShieldCheck, BarChart3, Users, Phone } from "lucide-react";
 import { Card } from "@/components/ui/card";
 
-const FeatureCard = ({ icon, title, desc }: { icon: React.ReactNode, title: string, desc: string }) => (
-  <Card className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-slate-200 dark:border-slate-800 p-6 hover:border-violet-500/30 transition-colors duration-300 hover:-translate-y-2 transform">
+const FeatureCard = ({ icon, title, desc, delay }: { icon: React.ReactNode, title: string, desc: string, delay: string }) => (
+  <Card 
+    className="bg-white dark:bg-slate-900/50 backdrop-blur-xl border-slate-200 dark:border-slate-800 p-6 hover:border-violet-500/30 transition-colors duration-300 hover:-translate-y-2 transform opacity-0 animate-fade-in-up"
+    style={{ animationDelay: delay, animationFillMode: 'forwards' }}
+  >
     <div className="w-12 h-12 bg-slate-100 dark:bg-slate-800 rounded-lg flex items-center justify-center mb-4">
       {icon}
     </div>
@@ -53,7 +56,7 @@ export default function Features() {
       
       <div className="grid md:grid-cols-3 gap-8">
         {features.map((feature, i) => (
-          <FeatureCard key={i} {...feature} />
+          <FeatureCard key={i} {...feature} delay={`${i * 100}ms`} />
         ))}
       </div>
     </section>
