@@ -222,6 +222,7 @@ export default function InteractiveDemo() {
                 placeholder="Type a scenario prompt or your own message..."
                 className="flex-1 bg-slate-800/50 rounded-lg px-4 py-2 text-white placeholder-slate-500 border border-slate-700 focus:outline-none focus:ring-2 focus:ring-violet-500"
                 disabled={status === 'processing'}
+                autoFocus={false}
             />
             <Button 
                 type="submit" 
