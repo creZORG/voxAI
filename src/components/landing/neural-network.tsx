@@ -94,16 +94,21 @@ const NeuralNetwork: React.FC = () => {
 
       for (let i = 0; i < particles.length; i++) {
         particles[i].update(rotationX, rotationY);
-        ctx!.beginPath();
-        ctx!.arc(particles[i].projectedX, particles[i].projectedY, particles[i].projectedScale * 2, 0, Math.PI * 2);
-        ctx!.fillStyle = particleColor;
-        ctx!.fill();
+        if (particles[i].projectedScale > 0) { // Check if particle is visible
+          ctx!.beginPath();
+          ctx!.arc(particles[i].projectedX, particles[i].projectedY, particles[i].projectedScale * 2, 0, Math.PI * 2);
+          ctx!.fillStyle = particleColor;
+          ctx!.fill();
+        }
       }
 
       for (let i = 0; i < particles.length; i++) {
         for (let j = i + 1; j < particles.length; j++) {
           const p1 = particles[i];
           const p2 = particles[j];
+
+          if (p1.projectedScale <= 0 || p2.projectedScale <= 0) continue; // Don't draw lines to invisible particles
+
           const dx = p1.projectedX - p2.projectedX;
           const dy = p1.projectedY - p2.projectedY;
           const distance = Math.sqrt(dx * dx + dy * dy);
