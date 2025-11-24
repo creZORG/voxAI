@@ -2,10 +2,14 @@
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
+import NeuralNetwork from './neural-network';
 
 export default function Hero() {
   return (
-    <section className="relative px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center max-w-7xl mx-auto">
+    <section className="relative px-4 sm:px-6 lg:px-8 pt-20 pb-16 text-center max-w-7xl mx-auto min-h-[60vh] md:min-h-[80vh] flex flex-col justify-center">
+       <div className="absolute inset-0 -z-10">
+        <NeuralNetwork />
+      </div>
       <h1 className="text-5xl md:text-7xl font-bold tracking-tight mb-8 bg-clip-text text-transparent bg-gradient-to-b from-slate-900 via-slate-800 to-slate-600 dark:from-white dark:via-white dark:to-slate-500">
         The AI Workforce for BPOs, Sales, <br />Customer Service & Fulfillment
       </h1>
