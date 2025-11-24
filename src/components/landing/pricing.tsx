@@ -9,7 +9,7 @@ import Link from 'next/link';
 
 const PricingCard = ({ tier, price, features, currency, popular, rate }: { tier: string, price: number | 'Custom', features: string[], currency: 'KES' | 'USD', popular?: boolean, rate: number }) => {
   const displayPrice = typeof price === 'number' 
-    ? currency === 'USD' ? price : Math.round(price * rate)
+    ? currency === 'USD' ? price : Math.round(price * rate / 10) * 10
     : 'Custom';
 
   return (
@@ -22,12 +22,13 @@ const PricingCard = ({ tier, price, features, currency, popular, rate }: { tier:
       <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">{tier}</h3>
       <div className="flex items-baseline gap-1 mb-6 min-h-[52px]">
         {price !== 'Custom' && (
-          <>
+          <div className="flex items-baseline">
+             <span className="text-slate-500 mr-1">{currency}</span>
             <span className="text-4xl font-bold text-slate-900 dark:text-white">
-              {currency === 'KES' ? 'KES ' : '$'}{typeof displayPrice === 'number' ? displayPrice.toLocaleString() : displayPrice}
+              {typeof displayPrice === 'number' ? displayPrice.toLocaleString() : displayPrice}
             </span>
-            <span className="text-slate-500">/mo</span>
-          </>
+            <span className="text-slate-500 ml-1">/mo</span>
+          </div>
         )}
         {price === 'Custom' && (
            <span className="text-4xl font-bold text-slate-900 dark:text-white">Custom</span>
@@ -69,7 +70,7 @@ export default function Pricing() {
         <p className="text-slate-600 dark:text-slate-400">10-Day Free Trial on all plans. No credit card required to test.</p>
       </div>
 
-      <div className="grid lg:grid-cols-5 gap-8">
+      <div className="grid md:grid-cols-2 lg:grid-cols-5 gap-8 items-start">
         {pricingTiers.map(tier => (
           <PricingCard 
             key={tier.tier}
