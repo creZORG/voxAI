@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useRef, useEffect } from 'react';
@@ -27,9 +28,6 @@ const NeuralNetwork: React.FC = () => {
       x: number;
       y: number;
       z: number;
-      vx: number;
-      vy: number;
-      vz: number;
       projectedX: number;
       projectedY: number;
       projectedScale: number;
@@ -38,9 +36,6 @@ const NeuralNetwork: React.FC = () => {
         this.x = (Math.random() - 0.5) * width;
         this.y = (Math.random() - 0.5) * height;
         this.z = Math.random() * width;
-        this.vx = (Math.random() - 0.5) / 2;
-        this.vy = (Math.random() - 0.5) / 2;
-        this.vz = Math.random() * 2 - 1;
         this.projectedX = 0;
         this.projectedY = 0;
         this.projectedScale = 0;
@@ -52,17 +47,18 @@ const NeuralNetwork: React.FC = () => {
         this.projectedY = this.y * this.projectedScale + height / 2;
       }
 
-      update(rotationY: number) {
+      update(rotationYValue: number) {
         // Rotate around Y axis (horizontal rotation)
-        const cosY = Math.cos(rotationY);
-        const sinY = Math.sin(rotationY);
+        const cosY = Math.cos(rotationYValue);
+        const sinY = Math.sin(rotationYValue);
+        
         const prevX = this.x;
         const prevZ = this.z;
+
         this.x = prevX * cosY - prevZ * sinY;
         this.z = prevX * sinY + prevZ * cosY;
-        
-        // Update Z position
-        this.z += this.vz;
+
+        // Wrap particles around
         if (this.z > width) this.z -= width * 2;
         if (this.z < -width) this.z += width * 2;
         
@@ -78,7 +74,7 @@ const NeuralNetwork: React.FC = () => {
     }
 
     let animationFrameId: number;
-    let rotationY = 0;
+    const rotationYValue = 0.0005;
 
     function animate() {
       ctx!.clearRect(0, 0, width, height);
@@ -87,10 +83,8 @@ const NeuralNetwork: React.FC = () => {
       const particleColor = isDarkMode ? 'rgba(255, 255, 255, 0.7)' : 'rgba(0, 0, 0, 0.7)';
       const lineColor = isDarkMode ? 'rgba(255, 255, 255, 0.1)' : 'rgba(0, 0, 0, 0.1)';
 
-      rotationY += 0.0005;
-
       for (let i = 0; i < particles.length; i++) {
-        particles[i].update(rotationY);
+        particles[i].update(rotationYValue);
         if (particles[i].projectedScale > 0) { // Check if particle is visible
           ctx!.beginPath();
           ctx!.arc(particles[i].projectedX, particles[i].projectedY, particles[i].projectedScale * 2, 0, Math.PI * 2);
