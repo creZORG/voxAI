@@ -176,7 +176,7 @@ export async function generateAgentResponse(input: AgentResponseInput) {
                             prompt: [
                                 ...input.messages.map(m => ({ role: m.role === 'agent' ? 'model' : m.role, content: [{ text: m.text }] })),
                                 choice.message,
-                                { role: 'tool', content: [{ data: toolResponse }] }
+                                { role: 'tool', content: [{ text: JSON.stringify(toolResponse) }] }
                             ],
                              model: 'googleai/gemini-2.5-flash',
                              config: {
