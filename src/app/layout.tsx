@@ -20,11 +20,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en" className="dark">
-      <body className={cn('min-h-screen bg-slate-950 font-sans selection:bg-violet-500/30', inter.variable, sourceCodePro.variable)}>
+    <html lang="en">
+      <body className={cn('min-h-screen bg-white text-slate-900 font-sans selection:bg-violet-500/30', inter.variable, sourceCodePro.variable, 'dark:bg-slate-950 dark:text-slate-50')}>
         <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none">
-          <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/20 rounded-full blur-[128px] animate-pulse" />
-          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/10 rounded-full blur-[128px]" />
+          <div className="absolute top-0 left-1/4 w-96 h-96 bg-violet-600/10 rounded-full blur-[128px] animate-pulse" />
+          <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-indigo-600/5 rounded-full blur-[128px]" />
         </div>
         <CurrencyProvider>
           <Header />

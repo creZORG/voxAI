@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Mic, Cpu, Terminal, Activity } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
@@ -15,62 +15,50 @@ type Status = 'idle' | 'listening' | 'processing' | 'speaking' | 'acting';
 export default function InteractiveDemo() {
   const [status, setStatus] = useState<Status>('idle');
   const [messages, setMessages] = useState<Message[]>([
-    { role: 'system', text: "Ready to test. Click the microphone to simulate a customer call." }
+    { role: 'system', text: "AI Agent Ready. Click the button to simulate a call." }
   ]);
-  const [latency, setLatency] = useState(0);
+  const [latency, setLatency] = useState(112);
 
-  useEffect(() => {
-    let interval: NodeJS.Timeout;
-    if (status !== 'idle' && status !== 'processing') {
-      interval = setInterval(() => {
-        setLatency(Math.floor(Math.random() * (180 - 80 + 1)) + 80);
-      }, 500);
-    } else {
-      setLatency(0);
-    }
-    return () => clearInterval(interval);
-  }, [status]);
-  
   const runSimulation = async () => {
     if (status !== 'idle') return;
-    setMessages([{ role: 'system', text: "Simulation started. Simulating user voice input..." }]);
-    
+    setMessages([]);
     setStatus('listening');
-    await new Promise(r => setTimeout(r, 1500));
-    setMessages(prev => [...prev, { role: 'user', text: "Hi, I need to reschedule my dental appointment to next Tuesday." }]);
+    await new Promise(r => setTimeout(r, 1000));
+    setMessages(prev => [...prev, { role: 'user', text: "I want to check the status of my order 1842." }]);
     
     setStatus('processing');
     await new Promise(r => setTimeout(r, 1200));
     
     setStatus('speaking');
-    setMessages(prev => [...prev, { role: 'agent', text: "I can help with that. Checking the calendar..." }]);
-    await new Promise(r => setTimeout(r, 1000));
+    setMessages(prev => [...prev, { role: 'agent', text: "Sure, let me confirm that for you. Checking your fulfillment records..." }]);
+    await new Promise(r => setTimeout(r, 1800));
     
     setStatus('acting');
     await new Promise(r => setTimeout(r, 1500));
-    const actionMsg = { role: 'tool' as const, text: "ACTION: Calendar_API.check_availability('next Tuesday')" };
+    const actionMsg = { role: 'tool' as const, text: "ACTION: FulfillmentAPI.get_status(1842)" };
     setMessages(prev => [...prev, actionMsg]);
     
     setStatus('speaking');
-    await new Promise(r => setTimeout(r, 1000));
-    setMessages(prev => [...prev, { role: 'agent', text: "I found a slot at 2:00 PM on Tuesday. Shall I book it?" }]);
+    await new Promise(r => setTimeout(r, 2000));
+    setMessages(prev => [...prev, { role: 'agent', text: "Your package is out for delivery and will arrive this afternoon. Would you like SMS updates?" }]);
     
+    await new Promise(r => setTimeout(r, 1000));
     setStatus('idle');
   };
 
   const statusMap = {
-    idle: { text: "Agent Ready", icon: <Mic className="w-12 h-12 text-slate-500" /> },
+    idle: { text: "AI Agent Ready", icon: <Mic className="w-12 h-12 text-slate-500" /> },
     listening: { text: "Listening...", icon: <Mic className="w-12 h-12 text-white" /> },
     processing: { text: "Processing...", icon: <Cpu className="w-12 h-12 text-white animate-spin-slow" /> },
     speaking: { text: "Agent Speaking", icon: <Mic className="w-12 h-12 text-white" /> },
-    acting: { text: "Executing Tool...", icon: <Terminal className="w-12 h-12 text-emerald-400" /> },
+    acting: { text: "Executing Action...", icon: <Terminal className="w-12 h-12 text-emerald-400" /> },
   };
 
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden shadow-2xl flex flex-col md:flex-row h-[600px]">
       <div className="flex-1 p-8 flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 to-slate-800 relative">
-        <div className="absolute top-6 left-6 text-xs font-mono text-slate-500 border border-slate-700 px-2 py-1 rounded">
-          LIVE DEMO ENV
+        <div className="absolute top-6 right-6 text-xs font-mono text-slate-400">
+            Latency: <span className="text-white">{latency}ms</span>
         </div>
 
         <div className={cn(
@@ -89,9 +77,6 @@ export default function InteractiveDemo() {
           <div className="text-xl font-medium text-white">
             {statusMap[status].text}
           </div>
-          <div className="text-sm text-slate-400 font-mono">
-            {latency > 0 ? `Latency: ${latency}ms` : <>&nbsp;</>}
-          </div>
         </div>
 
         <Button 
@@ -99,13 +84,13 @@ export default function InteractiveDemo() {
           disabled={status !== 'idle'}
           className="mt-8 bg-gradient-to-r from-violet-600 to-indigo-600 disabled:opacity-50"
         >
-           {status === 'idle' ? 'Simulate Call' : 'Processing...'}
+           {status === 'idle' ? 'Simulate Call' : 'Running...'}
         </Button>
       </div>
 
       <div className="flex-1 bg-slate-950 p-6 flex flex-col border-t md:border-t-0 md:border-l border-white/5 font-mono text-sm">
         <div className="flex items-center gap-2 text-slate-400 mb-4 pb-4 border-b border-white/5">
-          <Activity className="w-4 h-4" /> Live Transcript & Action Log
+          <Activity className="w-4 h-4" /> Live Demo
         </div>
         
         <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
