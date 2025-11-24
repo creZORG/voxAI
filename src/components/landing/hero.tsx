@@ -23,9 +23,6 @@ export default function Hero() {
         <Button asChild className="w-full sm:w-auto text-lg px-8 py-4 h-auto bg-gradient-to-r from-violet-600 to-indigo-600 text-white shadow-lg shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-105 transition-transform duration-300">
           <Link href="/dashboard">Start Free 10-Day Trial</Link>
         </Button>
-        <Button asChild variant="outline" className="w-full sm:w-auto text-lg px-8 py-4 h-auto gap-2 bg-transparent hover:scale-105 transition-transform duration-300">
-          <Link href="#">Book Live Demo</Link>
-        </Button>
       </div>
     </section>
   );

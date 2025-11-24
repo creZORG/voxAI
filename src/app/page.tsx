@@ -1,7 +1,6 @@
 import Features from "@/components/landing/features";
 import Footer from "@/components/layout/footer";
 import Hero from "@/components/landing/hero";
-import InteractiveDemo from "@/components/landing/interactive-demo";
 import Pricing from "@/components/landing/pricing";
 import SocialProof from "@/components/landing/social-proof";
 
@@ -11,9 +10,6 @@ export default function Home() {
       <Hero />
       <SocialProof />
       <Features />
-      <section id="demo-section" className="max-w-6xl mx-auto px-4">
-        <InteractiveDemo />
-      </section>
       <Pricing />
       <Footer />
     </div>
